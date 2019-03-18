@@ -1,10 +1,10 @@
 [submodule "mavlink/include/mavlink/v2.0"]
 	path = mavlink/include/mavlink/v2.0
-	url = https://github.com/mavlink/c_library_v2.git
+	url = https://gitee.com/sundx/c_library_v2.git
 	branch = master
 [submodule "src/modules/uavcan/libuavcan"]
 	path = src/modules/uavcan/libuavcan
-	url = https://github.com/UAVCAN/libuavcan.git
+	url = https://gitee.com/sundx/libuavcan.git
 	branch = master
 [submodule "msg/tools/genmsg"]
 	path = msg/tools/genmsg
@@ -32,7 +32,7 @@
 	branch = master
 [submodule "src/lib/ecl"]
 	path = src/lib/ecl
-	url = https://github.com/PX4/ecl.git
+	url = https://gitee.com/sundx/ecl.git
 	branch = master
 [submodule "cmake/cmake_hexagon"]
 	path = cmake/cmake_hexagon
@@ -48,11 +48,11 @@
 	branch = master
 [submodule "platforms/nuttx/NuttX/nuttx"]
 	path = platforms/nuttx/NuttX/nuttx
-	url = https://github.com/PX4-NuttX/nuttx.git
+	url = https://gitee.com/sundx/NuttX.git
 	branch = px4_firmware_nuttx-7.22+
 [submodule "platforms/nuttx/NuttX/apps"]
 	path = platforms/nuttx/NuttX/apps
-	url = https://github.com/PX4-NuttX/apps.git
+	url = https://gitee.com/sundx/NuttX-apps.git
 	branch = px4_firmware_nuttx-7.22+
 [submodule "cmake/configs/uavcan_board_ident"]
 	path = cmake/configs/uavcan_board_ident

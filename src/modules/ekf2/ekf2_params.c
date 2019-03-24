@@ -573,6 +573,8 @@ PARAM_DEFINE_FLOAT(EKF2_TAS_GATE, 3.0f);
 
 /**
  * Integer bitmask controlling data fusion and aiding methods.
+ * qgc set 1 to use flow by sdx
+ * 地面站设置 1 启用光流
  *
  * Set bits in the following positions to enable:
  * 0 : Set to true to use GPS data if available
@@ -599,6 +601,8 @@ PARAM_DEFINE_INT32(EKF2_AID_MASK, 1);
 
 /**
  * Determines the primary source of height data used by the EKF.
+ * qgc set 2 to use hgt by sdx
+ * 地面站设置2 启用高度传感器
  *
  * The range sensor option should only be used when for operation over a flat surface as the local NED origin will move up and down with ground level.
  *

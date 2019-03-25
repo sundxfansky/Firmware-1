@@ -889,7 +889,7 @@ void Ekf2::run()
 				flow_message flow;
 				flow.flowdata(0) = optical_flow.pixel_flow_x_integral;
 				flow.flowdata(1) = optical_flow.pixel_flow_y_integral;
-				flow.quality = optical_flow.quality;
+				flow.quality = 255;
 				flow.gyrodata(0) = optical_flow.gyro_x_rate_integral;
 				flow.gyrodata(1) = optical_flow.gyro_y_rate_integral;
 				flow.gyrodata(2) = optical_flow.gyro_z_rate_integral;

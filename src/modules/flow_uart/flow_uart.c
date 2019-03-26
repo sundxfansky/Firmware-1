@@ -43,8 +43,8 @@ int flow_uart_thread_main(int argc, char *argv[]);
 static int uart_init(const char * uart_name);    //
 static int set_uart_baudrate(const int fd, unsigned int baud); //static
 static void usage(const char *reason);            //static
+//extern orb_advert_t mavlink_log_pub;
 orb_advert_t mavlink_log_pub = NULL;
-
 
 int set_uart_baudrate(const int fd, unsigned int baud)
 {
@@ -204,7 +204,7 @@ int flow_uart_thread_main(int argc, char *argv[])
     // int counter = 0;
     uint64_t _previous_collect_timestamp = hrt_absolute_time();
     uint64_t _flow_dt_sum_usec = 0;
-    float scale = 0.7f;
+    float scale = 1.3f;
 //    int vehicle_attitude_sub = orb_subscribe(ORB_ID(vehicle_attitude));
     while(thread_running)
    {

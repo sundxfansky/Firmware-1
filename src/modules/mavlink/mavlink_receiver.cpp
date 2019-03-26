@@ -856,7 +856,7 @@ MavlinkReceiver::handle_message_att_pos_mocap(mavlink_message_t *msg)
 	// Use the component ID to identify the mocap system
 	att_pos_mocap.id = msg->compid;
 
-	att_pos_mocap.timestamp = _mavlink_timesync.sync_stamp(mocap.time_usec);
+	att_pos_mocap.timestamp = hrt_absolute_time();//_mavlink_timesync.sync_stamp(mocap.time_usec); by sdx
 	att_pos_mocap.timestamp_received = hrt_absolute_time();
 
 	att_pos_mocap.q[0] = mocap.q[0];
@@ -1176,7 +1176,7 @@ MavlinkReceiver::handle_message_local_position_ned_cov(mavlink_message_t *msg)
 
 	struct vehicle_local_position_s vision_position = {};
 
-	vision_position.timestamp = _mavlink_timesync.sync_stamp(pos.time_usec);
+	vision_position.timestamp = hrt_absolute_time();//_mavlink_timesync.sync_stamp(pos.time_usec); by sdx
 
 	vision_position.xy_valid = true;
 	vision_position.z_valid = true;
@@ -1236,7 +1236,7 @@ MavlinkReceiver::handle_message_vision_position_estimate(mavlink_message_t *msg)
 
 	struct vehicle_local_position_s vision_position = {};
 
-	vision_position.timestamp = _mavlink_timesync.sync_stamp(pos.usec);
+	vision_position.timestamp = hrt_absolute_time();// _mavlink_timesync.sync_stamp(pos.usec); change to hrt time by sdx
 	vision_position.x = pos.x;
 	vision_position.y = pos.y;
 	vision_position.z = pos.z;
@@ -1248,7 +1248,7 @@ MavlinkReceiver::handle_message_vision_position_estimate(mavlink_message_t *msg)
 
 	struct vehicle_attitude_s vision_attitude = {};
 
-	vision_attitude.timestamp = _mavlink_timesync.sync_stamp(pos.usec);
+	vision_attitude.timestamp = hrt_absolute_time();//_mavlink_timesync.sync_stamp(pos.usec); by sdx
 
 	matrix::Quatf q(matrix::Eulerf(pos.roll, pos.pitch, pos.yaw));
 	q.copyTo(vision_attitude.q);

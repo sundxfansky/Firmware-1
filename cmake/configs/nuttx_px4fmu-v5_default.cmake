@@ -39,6 +39,8 @@ set(config_module_list
 	drivers/tap_esc
 	drivers/vmount
 	modules/sensors
+	# added pmw3901 flow by sdx
+	drivers/pmw3901
 
 	#
 	# System commands

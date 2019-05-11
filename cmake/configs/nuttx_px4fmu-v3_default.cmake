@@ -18,7 +18,6 @@ set(config_module_list
 	drivers/distance_sensor
 	drivers/magnetometer
 	drivers/telemetry
-
 	drivers/batt_smbus
 	drivers/blinkm
 	drivers/camera_trigger
@@ -45,6 +44,8 @@ set(config_module_list
 	drivers/tap_esc
 	drivers/vmount
 	modules/sensors
+
+	drivers/pmw3901
 
 	#
 	# System commands

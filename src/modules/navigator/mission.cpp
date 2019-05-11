@@ -132,7 +132,7 @@ Mission::on_inactive()
 		_need_takeoff = true;
 	}
 
-	/* reset so current mission item gets restarted if mission was paused */
+	/* reset so current mission item gets resstarted if mission was paused */
 	_work_item_type = WORK_ITEM_TYPE_DEFAULT;
 
 	/* reset so MISSION_ITEM_REACHED isn't published */

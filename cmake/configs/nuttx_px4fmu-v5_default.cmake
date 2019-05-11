@@ -95,7 +95,7 @@ set(config_module_list
 	modules/attitude_estimator_q
 	modules/ekf2
 	modules/landing_target_estimator
-	modules/local_position_estimator
+#	modules/local_position_estimator
 	modules/position_estimator_inav
 	modules/wind_estimator
 
@@ -109,6 +109,11 @@ set(config_module_list
 	modules/mc_att_control
 	modules/mc_pos_control
 	modules/vtol_att_control
+
+	#
+	# sdx add upflow
+	#
+	modules/flow_uart
 
 	#
 	# Logging

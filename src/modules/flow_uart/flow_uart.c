@@ -169,7 +169,7 @@ int flow_uart_thread_main(int argc, char *argv[])
     float integration_timespan = -1;
     // long checksum = 0; 
     // uint8_t valid = 0;
-    int uart_read = uart_init("/dev/ttyS4");//fmuv5 ttys4 fmuv2,v3 ttys6
+    int uart_read = uart_init("/dev/ttyS3");//fmuv5 ttys3 fmuv2,v3 ttys6
     if(false == uart_read)
     {
          mavlink_log_critical(&mavlink_log_pub,"[YCM]uart init is failed\n");

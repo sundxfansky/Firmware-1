@@ -2,7 +2,7 @@
 上海交大无人系统实验室 PX4稳定固件-光流版
 每次需要修改三个参数 AID_MASK(optical_flow); HGT(range_sensor); ll40ls(i2c);
 
-pxihawk,pixhack v3 /dev/ttyS6,pixhawk4 /dev/ttyS4
+pxihawk,pixhack v3 /dev/ttyS6,pixhawk4 /dev/ttyS3
 
 * Official Website: http://px4.io (License: BSD 3-clause, [LICENSE](https://github.com/PX4/Firmware/blob/master/LICENSE))
 * [Supported airframes](https://docs.px4.io/en/airframes/airframe_reference.html) ([portfolio](http://px4.io/#airframes)):

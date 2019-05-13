@@ -1,6 +1,7 @@
 # SJTU-USATL-PX4-v1.8.0 STABLE
 上海交大无人系统实验室 PX4稳定固件-光流版
 每次需要修改三个参数 AID_MASK(optical_flow); HGT(range_sensor); ll40ls(i2c);
+用于debug upflow，输出串口数据，在v5 上要禁用系统设置 的ttyS3 mavlink功能在rcs内部
 
 pxihawk,pixhack v3 /dev/ttyS6,pixhawk4 /dev/ttyS3
 

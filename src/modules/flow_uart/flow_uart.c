@@ -31,6 +31,7 @@
  *
  * This driver publish optical flow data.
  */
+
 static bool thread_should_exit = false;
 static bool thread_running = false;
 static int daemon_task;
@@ -169,7 +170,8 @@ int flow_uart_thread_main(int argc, char *argv[])
     float integration_timespan = -1;
     // long checksum = 0; 
     // uint8_t valid = 0;
-    int uart_read = uart_init("/dev/ttyS3");//fmuv5 ttys3 fmuv2,v3 ttys6
+    int uart_read = uart_init("/dev/ttyS3"); // ttyS3 for fmuv5 ttyS6 for fmuv2
+
     if(false == uart_read)
     {
          mavlink_log_critical(&mavlink_log_pub,"[YCM]uart init is failed\n");
@@ -180,13 +182,14 @@ int flow_uart_thread_main(int argc, char *argv[])
         return -1;
     }
     mavlink_log_info(&mavlink_log_pub,"[YCM]uart init is successful\n");
-    PX4_INFO("status: sucesss1");
-
 
     thread_running = true;
 
     // 定义话题结构
     struct optical_flow_s flow_data;
+//    struct vehicle_attitude_s att;
+//    memset(&att, 0, sizeof(att));
+    // struct upixels_flow_s flow_data;
     // 初始化数据
     memset(&flow_data, 0 , sizeof(flow_data));
    
@@ -205,20 +208,15 @@ int flow_uart_thread_main(int argc, char *argv[])
 //    int vehicle_attitude_sub = orb_subscribe(ORB_ID(vehicle_attitude));
     while(thread_running)
    {
-        PX4_INFO("status: sucesss2");
-        PX4_INFO("uart :%d",uart_read);
         // PX4_WARN("warnxxxxxxxxxxxx!!!!");
         //解码 串口信息
     	read(uart_read,&data,1);
-        PX4_INFO("status: sucesss2.1");
         if((data == 0xFE))
         {
-            PX4_INFO("status: sucesss3");
             data = '0';
             read(uart_read,&data,1);
             if((data == 0x0A))
             {
-                PX4_INFO("status: sucesss4");
                 for(int k = 0;k < 6;++k)
                 {
                 data = '0';
@@ -230,7 +228,6 @@ int flow_uart_thread_main(int argc, char *argv[])
                     data = '0';
                     read(uart_read,&data,1);
                 }
-                PX4_INFO("status: sucesss5");
                 buffer[6] = data;
                 uint64_t timestamp = hrt_absolute_time();
                 uint64_t dt_flow = timestamp - _previous_collect_timestamp;
@@ -246,7 +243,7 @@ int flow_uart_thread_main(int argc, char *argv[])
                 //flow_data.pixel_flow_y_integral = (float)(upixels_flow_y*1000000.0f/integration_timespan);// rad/s
                 flow_data.pixel_flow_x_integral = -upixels_flow_y*scale;
                 flow_data.pixel_flow_y_integral = upixels_flow_x*scale;
-                //orb_copy(ORB_ID(vehicle_attitude), vehicle_attitude_sub, &att);
+//              orb_copy(ORB_ID(vehicle_attitude), vehicle_attitude_sub, &att);
                 flow_data.gyro_x_rate_integral = 0.0f*integration_timespan;
                 flow_data.gyro_y_rate_integral = 0.0f;
                 flow_data.gyro_z_rate_integral = 0.0f;

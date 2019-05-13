@@ -3,6 +3,35 @@
 每次需要修改三个参数 AID_MASK(optical_flow); HGT(range_sensor); ll40ls(i2c);
 
 pxihawk,pixhack v3 /dev/ttyS6,pixhawk4 /dev/ttyS3
+需要在pixhawk4 中使用时，应在rcs中禁用ttyS3 mavlink内容
+```
+# UART mapping on OMNIBUSF4SD:
+#
+# USART1		/dev/ttyS0		SerialRX
+# USART4		/dev/ttyS1		TELEM1
+# USART6		/dev/ttyS2		GPS
+#
+# UART mapping on FMUv2/3/4:
+#
+# UART1			/dev/ttyS0		IO debug (except v4, there ttyS0 is the wifi)
+# USART2		/dev/ttyS1		TELEM1 (flow control)
+# USART3		/dev/ttyS2		TELEM2 (flow control)
+# UART4
+# UART7							CONSOLE
+# UART8							SERIAL4
+#
+#
+# UART mapping on FMUv5:
+#
+# UART1			/dev/ttyS0		GPS
+# USART2		/dev/ttyS1		TELEM1 (flow control)
+# USART3		/dev/ttyS2		TELEM2 (flow control)
+# UART4			/dev/ttyS3		TELEM4
+# USART6		/dev/ttyS4		TELEM3 (flow control)
+# UART7			/dev/ttyS5		?
+# UART8			/dev/ttyS6		CONSOLE
+```
+
 
 * Official Website: http://px4.io (License: BSD 3-clause, [LICENSE](https://github.com/PX4/Firmware/blob/master/LICENSE))
 * [Supported airframes](https://docs.px4.io/en/airframes/airframe_reference.html) ([portfolio](http://px4.io/#airframes)):

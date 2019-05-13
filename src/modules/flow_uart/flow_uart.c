@@ -162,11 +162,11 @@ int flow_uart_thread_main(int argc, char *argv[])
 {
     mavlink_log_info(&mavlink_log_pub,"upixels_flow run ");
     char data = '0';
-    //const char *uart_name = argv[1];
-    char buffer[7] = "";
-    float upixels_flow_x = -1;
-    float upixels_flow_y = -1;
-    float integration_timespan = -1;
+//    //const char *uart_name = argv[1];
+//    char buffer[7] = "";
+//    float upixels_flow_x = -1;
+//    float upixels_flow_y = -1;
+//    float integration_timespan = -1;
     // long checksum = 0; 
     // uint8_t valid = 0;
     int uart_read = uart_init("/dev/ttyS3");//fmuv5 ttys3 fmuv2,v3 ttys6
@@ -180,7 +180,7 @@ int flow_uart_thread_main(int argc, char *argv[])
         return -1;
     }
     mavlink_log_info(&mavlink_log_pub,"[YCM]uart init is successful\n");
-    PX4_INFO("status: sucesss1");
+//    PX4_INFO("status: sucesss1");
 
 
     thread_running = true;
@@ -191,7 +191,7 @@ int flow_uart_thread_main(int argc, char *argv[])
     memset(&flow_data, 0 , sizeof(flow_data));
    
     //公告消息
-    orb_advert_t flow_data_handle = orb_advertise(ORB_ID(optical_flow), &flow_data);//公告这个主题
+//    orb_advert_t flow_data_handle = orb_advertise(ORB_ID(optical_flow), &flow_data);//公告这个主题
     //  orb_advert_t flow_data_handle = orb_advertise(ORB_ID(upixels_flow), &flow_data);//公告这个主题
 
     // 测试订阅程序
@@ -199,76 +199,84 @@ int flow_uart_thread_main(int argc, char *argv[])
     // struct upixels_flow_s test_sub;
 
     // int counter = 0;
-    uint64_t _previous_collect_timestamp = hrt_absolute_time();
-    uint64_t _flow_dt_sum_usec = 0;
-    float scale = 1.3f;
+//    uint64_t _previous_collect_timestamp = hrt_absolute_time();
+//    uint64_t _flow_dt_sum_usec = 0;
+//    float scale = 1.3f;
 //    int vehicle_attitude_sub = orb_subscribe(ORB_ID(vehicle_attitude));
+    char fuck_buffer[14];
     while(thread_running)
    {
-        PX4_INFO("status: sucesss2");
-        PX4_INFO("uart :%d",uart_read);
-        // PX4_WARN("warnxxxxxxxxxxxx!!!!");
-        //解码 串口信息
-    	read(uart_read,&data,1);
-        PX4_INFO("status: sucesss2.1");
-        if((data == 0xFE))
-        {
-            PX4_INFO("status: sucesss3");
+//        PX4_INFO("status: sucesss2");
+//        PX4_INFO("uart :%d",uart_read);
+//    	read(uart_read,&data,1);
+//        if((data == 0xFE))
+//        {
+            for(int k = 0;k < 14;++k){
             data = '0';
             read(uart_read,&data,1);
-            if((data == 0x0A))
-            {
-                PX4_INFO("status: sucesss4");
-                for(int k = 0;k < 6;++k)
-                {
-                data = '0';
-                read(uart_read,&data,1);
-                buffer[k] = data;
-                }
-                for(int k = 0;k < 3;++k)
-                {
-                    data = '0';
-                    read(uart_read,&data,1);
-                }
-                PX4_INFO("status: sucesss5");
-                buffer[6] = data;
-                uint64_t timestamp = hrt_absolute_time();
-                uint64_t dt_flow = timestamp - _previous_collect_timestamp;
-                _previous_collect_timestamp = timestamp;
-                _flow_dt_sum_usec += dt_flow;
-                // debug 输出数据 十六进制
-                // PX4_INFO("%X,%X,%X,%X,%X,%X,%X,",buffer[0],buffer[1],buffer[2],buffer[3],buffer[4],buffer[5],buffer[6]);
-                //X 像素点累计时间内的累加位移,(radians*10000) [除以 10000 乘以高度(m)后为实际位移(m)]
-                upixels_flow_x = (float)((int16_t)(buffer[1]<<8|buffer[0])/10000.0f);// 单位是m
-                upixels_flow_y = (float)((int16_t)(buffer[3]<<8|buffer[2])/10000.0f);// 单位是m
-                integration_timespan = (float)((uint16_t)(buffer[5]<<8|buffer[4]));// 单位是us
-                //flow_data.pixel_flow_x_integral = (float)(upixels_flow_x*1000000.0f/integration_timespan);// rad/s
-                //flow_data.pixel_flow_y_integral = (float)(upixels_flow_y*1000000.0f/integration_timespan);// rad/s
-                flow_data.pixel_flow_x_integral = -upixels_flow_y*scale;
-                flow_data.pixel_flow_y_integral = upixels_flow_x*scale;
-                //orb_copy(ORB_ID(vehicle_attitude), vehicle_attitude_sub, &att);
-                flow_data.gyro_x_rate_integral = 0.0f*integration_timespan;
-                flow_data.gyro_y_rate_integral = 0.0f;
-                flow_data.gyro_z_rate_integral = 0.0f;
-                flow_data.min_ground_distance = 0.5;//与官方optical_flow不同，官方数据为0.7
-                flow_data.max_ground_distance = 3;//与官方optical_flow相同
-                flow_data.max_flow_rate = 2.5;//与官方optical_flow相同,最大限制角速度
-                flow_data.sensor_id = 0;
-                flow_data.timestamp = timestamp;
-                flow_data.frame_count_since_last_readout = 1; //4;
-                flow_data.integration_timespan = _flow_dt_sum_usec;
-                _flow_dt_sum_usec = 0;
-                if (buffer[6] == 0xF5) {
-                    //数据可用
-                    flow_data.quality = 255;
-                    orb_publish(ORB_ID(optical_flow),flow_data_handle,  &flow_data);
-                }
-                else{
-                    flow_data.quality = 0;
-                    orb_publish(ORB_ID(optical_flow),flow_data_handle,&flow_data);
-                }
+            fuck_buffer[k] = data;
             }
-        }
+            PX4_INFO("%X,%X,%X,%X,%X,%X"
+                     "%X,%X,%X,%X,%X,%X"
+                     "%X,%X",
+                    fuck_buffer[0],fuck_buffer[1],fuck_buffer[2],fuck_buffer[3],fuck_buffer[4],fuck_buffer[5],
+                     fuck_buffer[6],fuck_buffer[7],fuck_buffer[8],fuck_buffer[9],fuck_buffer[10],fuck_buffer[11],
+                     fuck_buffer[12],fuck_buffer[13]);
+
+//
+//            if((data == 0x0A))
+//            {
+//                PX4_INFO("status: sucesss4");
+//                for(int k = 0;k < 6;++k)
+//                {
+//                data = '0';
+//                read(uart_read,&data,1);
+//                buffer[k] = data;
+//                }
+//                for(int k = 0;k < 3;++k)
+//                {
+//                    data = '0';
+//                    read(uart_read,&data,1);
+//                }
+//                PX4_INFO("status: sucesss5");
+//                buffer[6] = data;
+//                uint64_t timestamp = hrt_absolute_time();
+//                uint64_t dt_flow = timestamp - _previous_collect_timestamp;
+//                _previous_collect_timestamp = timestamp;
+//                _flow_dt_sum_usec += dt_flow;
+//                // debug 输出数据 十六进制
+//                // PX4_INFO("%X,%X,%X,%X,%X,%X,%X,",buffer[0],buffer[1],buffer[2],buffer[3],buffer[4],buffer[5],buffer[6]);
+//                //X 像素点累计时间内的累加位移,(radians*10000) [除以 10000 乘以高度(m)后为实际位移(m)]
+//                upixels_flow_x = (float)((int16_t)(buffer[1]<<8|buffer[0])/10000.0f);// 单位是m
+//                upixels_flow_y = (float)((int16_t)(buffer[3]<<8|buffer[2])/10000.0f);// 单位是m
+//                integration_timespan = (float)((uint16_t)(buffer[5]<<8|buffer[4]));// 单位是us
+//                //flow_data.pixel_flow_x_integral = (float)(upixels_flow_x*1000000.0f/integration_timespan);// rad/s
+//                //flow_data.pixel_flow_y_integral = (float)(upixels_flow_y*1000000.0f/integration_timespan);// rad/s
+//                flow_data.pixel_flow_x_integral = -upixels_flow_y*scale;
+//                flow_data.pixel_flow_y_integral = upixels_flow_x*scale;
+//                //orb_copy(ORB_ID(vehicle_attitude), vehicle_attitude_sub, &att);
+//                flow_data.gyro_x_rate_integral = 0.0f*integration_timespan;
+//                flow_data.gyro_y_rate_integral = 0.0f;
+//                flow_data.gyro_z_rate_integral = 0.0f;
+//                flow_data.min_ground_distance = 0.5;//与官方optical_flow不同，官方数据为0.7
+//                flow_data.max_ground_distance = 3;//与官方optical_flow相同
+//                flow_data.max_flow_rate = 2.5;//与官方optical_flow相同,最大限制角速度
+//                flow_data.sensor_id = 0;
+//                flow_data.timestamp = timestamp;
+//                flow_data.frame_count_since_last_readout = 1; //4;
+//                flow_data.integration_timespan = _flow_dt_sum_usec;
+//                _flow_dt_sum_usec = 0;
+//                if (buffer[6] == 0xF5) {
+//                    //数据可用
+//                    flow_data.quality = 255;
+//                    orb_publish(ORB_ID(optical_flow),flow_data_handle,  &flow_data);
+//                }
+//                else{
+//                    flow_data.quality = 0;
+//                    orb_publish(ORB_ID(optical_flow),flow_data_handle,&flow_data);
+//                }
+//            }
+//        }
    }
     thread_running = false;
     //取消订阅
@@ -276,5 +284,4 @@ int flow_uart_thread_main(int argc, char *argv[])
     close(uart_read);
     fflush(stdout);
     return 0;
-
 }

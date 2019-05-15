@@ -84,6 +84,11 @@ set(config_module_list
 	systemcmds/tests
 
 	#
+	# sdx added xbee_uart
+	#
+	modules/xbee_uart
+
+	#
 	# General system control
 	#
 	modules/camera_feedback

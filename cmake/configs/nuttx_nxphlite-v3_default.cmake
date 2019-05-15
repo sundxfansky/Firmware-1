@@ -74,6 +74,8 @@ set(config_module_list
 	modules/mc_pos_control/mc_pos_control_tests
 	modules/uORB/uORB_tests
 	systemcmds/tests
+#	sdx added xbee_uart
+#	modules/xbee_uart
 
 	#
 	# General system control

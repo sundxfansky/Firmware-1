@@ -23,11 +23,11 @@
 
 
 /**
- * @file flow_uart.c
+ * @file xbee_uart.c
  * @author Tonser <sundxfansky@sjtu.edu.cn>
- * v1.0 2019.3.24
+ * v1.0 2019.5.14
  *
- * 优象光流驱动 通过串口传递数据 发布ORB_ID(optical_flow)
+ * xbee驱动 通过串口传递数据 发布ORB_ID(optical_flow)
  *
  * This driver publish optical flow data.
  */
@@ -36,14 +36,14 @@ static bool thread_running = false;
 static int daemon_task;
 
 
-__EXPORT int flow_uart_main(int argc, char *argv[]);
-int flow_uart_thread_main(int argc, char *argv[]);
+__EXPORT int xbee_uart_main(int argc, char *argv[]);
+int xbee_uart_thread_main(int argc, char *argv[]);
 
 static int uart_init(const char * uart_name);    //
 static int set_uart_baudrate(const int fd, unsigned int baud); //static
 static void usage(const char *reason);            //static
-//extern orb_advert_t mavlink_log_pub;
-orb_advert_t mavlink_log_pub = NULL;
+//extern orb_advert_t mavlink_log_pub_DEBUG;
+orb_advert_t mavlink_log_pub_DEBUG = NULL;
 
 int set_uart_baudrate(const int fd, unsigned int baud)
 {
@@ -111,11 +111,11 @@ static void usage(const char *reason)
     exit(1);
 }
 
-int flow_uart_main(int argc, char *argv[])
+int xbee_uart_main(int argc, char *argv[])
 {
 
-mavlink_log_info(&mavlink_log_pub,"[inav] upixels_flow_main on init");
-// mavlink_log_critical(mavlink_log_pub, "test>>>>>>> %8.4f",9.9898);
+mavlink_log_info(&mavlink_log_pub_DEBUG,"[inav] upixels_flow_main on init");
+// mavlink_log_critical(mavlink_log_pub_DEBUG, "test>>>>>>> %8.4f",9.9898);
 			
     if (argc < 2) 
     {
@@ -129,11 +129,11 @@ mavlink_log_info(&mavlink_log_pub,"[inav] upixels_flow_main on init");
         }
 
         thread_should_exit = false;
-        daemon_task = px4_task_spawn_cmd("flow_uart",
+        daemon_task = px4_task_spawn_cmd("xbee_uart",
                          SCHED_DEFAULT,
                          SCHED_PRIORITY_DEFAULT,
                          2500,
-                         flow_uart_thread_main,
+                         xbee_uart_thread_main,
                          (argv) ? (char * const *)&argv[2] : (char * const *)NULL);
         return 0;
     }
@@ -158,9 +158,9 @@ mavlink_log_info(&mavlink_log_pub,"[inav] upixels_flow_main on init");
     return 1;
 }
 
-int flow_uart_thread_main(int argc, char *argv[])
+int xbee_uart_thread_main(int argc, char *argv[])
 {
-    mavlink_log_info(&mavlink_log_pub,"upixels_flow run ");
+    mavlink_log_info(&mavlink_log_pub_DEBUG,"upixels_flow run ");
     char data = '0';
 //    //const char *uart_name = argv[1];
 //    char buffer[7] = "";
@@ -169,17 +169,18 @@ int flow_uart_thread_main(int argc, char *argv[])
 //    float integration_timespan = -1;
     // long checksum = 0; 
     // uint8_t valid = 0;
-    int uart_read = uart_init("/dev/ttyS3");//fmuv5 ttys3 fmuv2,v3 ttys6
+    int uart_read = uart_init("/dev/ttyS6");//fmuv5 ttys3 fmuv2,v3 ttys6
     if(false == uart_read)
     {
-         mavlink_log_critical(&mavlink_log_pub,"[YCM]uart init is failed\n");
+         mavlink_log_critical(&mavlink_log_pub_DEBUG,"[YCM]uart init is failed\n");
          return -1;
     }
-    if(false == set_uart_baudrate(uart_read,19200)){
-        // mavlink_log_critical(&mavlink_log_pub,"[YCM]set_uart_baudrate is failed\n");
+    if(false == set_uart_baudrate(uart_read,57600)){
+        // xbee baudrate 57600
+        // mavlink_log_critical(&mavlink_log_pub_DEBUG,"[YCM]set_uart_baudrate is failed\n");
         return -1;
     }
-    mavlink_log_info(&mavlink_log_pub,"[YCM]uart init is successful\n");
+    mavlink_log_info(&mavlink_log_pub_DEBUG,"[YCM]uart init is successful\n");
 //    PX4_INFO("status: sucesss1");
 
 

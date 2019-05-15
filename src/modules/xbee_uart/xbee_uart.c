@@ -20,6 +20,8 @@
 #include <px4_tasks.h>
 #include <px4_time.h>
 
+#include <sys/select.h>
+
 
 
 /**
@@ -34,7 +36,8 @@
 static bool thread_should_exit = false;
 static bool thread_running = false;
 static int daemon_task;
-
+#define RECBUFSIZE 256;
+#define SEND_SIZE 14;
 
 __EXPORT int xbee_uart_main(int argc, char *argv[]);
 int xbee_uart_thread_main(int argc, char *argv[]);
@@ -111,6 +114,236 @@ static void usage(const char *reason)
     exit(1);
 }
 
+/**
+ * receive data
+ *
+ * @param file_descriptor file descriptor of serial port device file
+ * @param buffer   buffer to receive data
+ * @param data_len max data length
+ *
+ * @return positive integer of bytes received if success.
+ *  return -1 if failed.
+ */
+int serial_receive(int file_descriptor, char *buffer,size_t data_len)
+{
+    int len,fs_sel;
+    fd_set fs_read;
+    struct timeval time;
+    int fd = file_descriptor;
+
+    FD_ZERO(&fs_read);
+    FD_SET(fd, &fs_read);
+
+    time.tv_sec = 10;
+    time.tv_usec = 0;
+
+    //use select() to achieve multiple channel communication
+    fs_sel = select(fd + 1, &fs_read, NULL, NULL, &time);
+    if ( fs_sel ) {
+        len = read(fd, buffer, data_len);
+        return len;
+    } else {
+        return -1;
+    }
+}
+
+unsigned short crc_update (unsigned short crc, unsigned char data)
+{
+    data ^= (crc & 0xff);
+    data ^= data << 4;
+
+    return ((((unsigned short )data << 8) | ((crc>>8)&0xff)) ^ (unsigned char )(data >> 4)
+            ^ ((unsigned short )data << 3));
+}
+
+unsigned short crc16(void* data, unsigned short cnt)
+{
+    unsigned short crc=0xff;
+    unsigned char * ptr=(unsigned char *) data;
+    int i;
+
+    for (i=0;i<cnt;i++)
+    {
+        crc=crc_update(crc,*ptr);
+        ptr++;
+    }
+    return crc;
+
+}
+
+short getlength(short s,short e)
+{
+    short data_length=0;
+    if(s<=e)
+    {
+        data_length=e-s;
+    }
+    else
+    {
+        data_length=e+RECBUFSIZE-s;
+    }
+    return data_length;
+}
+
+short incindex(short num,short inc)
+{
+    num=num+inc;
+    if(num>RECBUFSIZE-1)
+    {
+        num=num-RECBUFSIZE;
+    }
+    return num;
+}
+
+int parse_xbee_data(int fd, short *data, short send_size = 14){
+    int size = 0;
+    static char data_in[RECBUFSIZE];
+    char data_buf[RECBUFSIZE];
+    char recbuf[32];
+    short sync = 0;
+    short i=0, j=0, k=0;
+    int readcount = 0;
+    short intstate=0;
+
+    int read_tmp = 0;
+    char descriptor = 0;
+    unsigned short* crc = NULL;
+    short* data_ptr = NULL;
+    unsigned long RxBytes, BytesReceived;
+    static short data_out_store[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    static short status_store[] = {0,0};
+//    short send_size = 14;
+    short data_new_flag = 1;
+    short data_length=0;
+
+    static char data_rec_store[256];
+    static int data_rec_count=0;
+    static short data_sync=0;
+    static short starti=0;
+    static short endi=0;
+
+    size = send_size*2+3+3;
+
+    data_length=getlength(starti,endi);
+
+
+    BytesReceived = serial_receive(fd,data_buf,size*2);
+    if(BytesReceived<1)
+    {
+        return 0;
+    }
+    {
+        if(data_length+BytesReceived>RECBUFSIZE-1)
+        {
+            endi=0;starti=0;
+        }
+        j=0;i=endi;
+        for(k=0;k<BytesReceived;k++)
+        {
+            if(i>RECBUFSIZE-1)
+            {
+                i=i-RECBUFSIZE;
+            }
+            data_in[i]=data_buf[j];
+            j++;
+            i++;
+        }
+        endi=i;
+        data_length=getlength(starti,endi);
+        if(data_length<size)
+        {
+            data_new_flag = 0;
+        }
+        else
+        {
+            data_new_flag = 1;
+        }
+    }
+
+    i=starti;
+
+    while ((sync!=3) && (data_new_flag == 1))
+    {
+        if (sync==0)
+        {
+            if (data_in[i]=='>')
+            {
+                sync=1;
+                starti=i;
+            }
+            else
+            {
+                sync=0;
+            }
+        }
+        else if (sync==1)
+        {
+            if (data_in[i]=='*')
+            {
+                sync=2;
+            }
+            else
+            {
+                sync=0;
+                incindex(starti,1);
+            }
+        }
+        else if (sync==2)
+        {
+            if (data_in[i]=='>')
+            {
+                sync=3;
+            }
+            else
+            {
+                sync=0;
+                incindex(starti,1);
+            }
+        }
+
+        data_length=getlength(starti,endi);
+        if(sync==3&&data_length<size)
+        {
+            data_new_flag = 0;
+        }
+        i=incindex(i,1);
+        if(i==endi)
+        {
+            starti=i;
+            data_new_flag=0;
+        }
+    }
+
+    if (data_new_flag == 1)
+    {
+        j=starti;
+        for(k=0;k<size;k++)
+        {
+            recbuf[k]=data_in[j];
+            j++;
+            if(j>RECBUFSIZE-1)
+            {
+                j=j-RECBUFSIZE;
+            }
+        }
+        i=3;
+        descriptor = recbuf[i];
+        i=i+1;
+        data_ptr = (short*) &(recbuf[i]);
+        i = i+send_size*2;
+        crc = (unsigned short*)&(recbuf[i]);
+
+        if (crc16(data_ptr, send_size*2) == *crc)
+        {
+            memcpy(data_out, data_ptr, sizeof(data_out_store));
+            starti=incindex(starti,size);
+            return 1;
+        }
+
+    }
+    return 0;
+}
+
 int xbee_uart_main(int argc, char *argv[])
 {
 
@@ -162,30 +395,21 @@ int xbee_uart_thread_main(int argc, char *argv[])
 {
     mavlink_log_info(&mavlink_log_pub_DEBUG,"upixels_flow run ");
     char data = '0';
-//    //const char *uart_name = argv[1];
-//    char buffer[7] = "";
-//    float upixels_flow_x = -1;
-//    float upixels_flow_y = -1;
-//    float integration_timespan = -1;
-    // long checksum = 0; 
-    // uint8_t valid = 0;
+    short data_out[SEND_SIZE];
+    int sec[2];
     int uart_read = uart_init("/dev/ttyS6");//fmuv5 ttys3 fmuv2,v3 ttys6
     if(false == uart_read)
     {
-         mavlink_log_critical(&mavlink_log_pub_DEBUG,"[YCM]uart init is failed\n");
-         return -1;
+        mavlink_log_critical(&mavlink_log_pub_DEBUG,"[YCM]uart init is failed\n");
+        return -1;
     }
     if(false == set_uart_baudrate(uart_read,57600)){
         // xbee baudrate 57600
-        // mavlink_log_critical(&mavlink_log_pub_DEBUG,"[YCM]set_uart_baudrate is failed\n");
+        mavlink_log_critical(&mavlink_log_pub_DEBUG,"[YCM]set_uart_baudrate is failed\n");
         return -1;
     }
     mavlink_log_info(&mavlink_log_pub_DEBUG,"[YCM]uart init is successful\n");
-//    PX4_INFO("status: sucesss1");
-
-
     thread_running = true;
-
     // 定义话题结构
     struct optical_flow_s flow_data;
     // 初始化数据
@@ -204,25 +428,32 @@ int xbee_uart_thread_main(int argc, char *argv[])
 //    uint64_t _flow_dt_sum_usec = 0;
 //    float scale = 1.3f;
 //    int vehicle_attitude_sub = orb_subscribe(ORB_ID(vehicle_attitude));
-    char fuck_buffer[14];
     while(thread_running)
    {
-//        PX4_INFO("status: sucesss2");
+        parse_xbee_data(uart_read,data_out,SEND_SIZE);
+        memcpy(secs,&data_out[10],sizeof(secs));
+        PX4_INFO("%X,%X,%X,%X,%X,%X"
+                "%X,%X,%X,%X,%X,%X"
+                "%X,%X",
+                data_out[0],data_out[1],data_out[2],data_out[3],data_out[4],data_out[5],
+                data_out[6],data_out[7],data_out[8],data_out[9],data_out[10],data_out[11],
+                data_out[12],data_out[13]);
+
 //        PX4_INFO("uart :%d",uart_read);
-//    	read(uart_read,&data,1);
+//    	  read(uart_read,&data,1);
 //        if((data == 0xFE))
 //        {
-            for(int k = 0;k < 14;++k){
-            data = '0';
-            read(uart_read,&data,1);
-            fuck_buffer[k] = data;
-            }
-            PX4_INFO("%X,%X,%X,%X,%X,%X"
-                     "%X,%X,%X,%X,%X,%X"
-                     "%X,%X",
-                    fuck_buffer[0],fuck_buffer[1],fuck_buffer[2],fuck_buffer[3],fuck_buffer[4],fuck_buffer[5],
-                     fuck_buffer[6],fuck_buffer[7],fuck_buffer[8],fuck_buffer[9],fuck_buffer[10],fuck_buffer[11],
-                     fuck_buffer[12],fuck_buffer[13]);
+//            for(int k = 0;k < 14;++k){
+//            data = '0';
+//            read(uart_read,&data,1);
+//            fuck_buffer[k] = data;
+//            }
+//            PX4_INFO("%X,%X,%X,%X,%X,%X"
+//                     "%X,%X,%X,%X,%X,%X"
+//                     "%X,%X",
+//                    fuck_buffer[0],fuck_buffer[1],fuck_buffer[2],fuck_buffer[3],fuck_buffer[4],fuck_buffer[5],
+//                     fuck_buffer[6],fuck_buffer[7],fuck_buffer[8],fuck_buffer[9],fuck_buffer[10],fuck_buffer[11],
+//                     fuck_buffer[12],fuck_buffer[13]);
 
 //
 //            if((data == 0x0A))

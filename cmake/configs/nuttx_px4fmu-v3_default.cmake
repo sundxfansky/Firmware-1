@@ -86,7 +86,8 @@ set(config_module_list
 	#
 	# sdx added xbee_uart
 	#
-	modules/xbee_uart
+	modules/xbee_receive
+	modules/xbee_send
 
 	#
 	# General system control

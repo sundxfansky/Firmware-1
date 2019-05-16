@@ -11,41 +11,49 @@
 #include <fcntl.h>
 #include <systemlib/mavlink_log.h>
 #include <uORB/uORB.h>
-#include <uORB/topics/optical_flow.h>
-//#include <uORB/topics/vehicle_attitude.h>
+#include <uORB/topics/vehicle_attitude_setpoint.h>
 #include <px4_defines.h>
 #include <px4_config.h>
 #include <px4_posix.h>
 #include <px4_shutdown.h>
 #include <px4_tasks.h>
 #include <px4_time.h>
-
+// xbee driver needed
 #include <sys/select.h>
+#include "sys/time.h"
 
 
 
 /**
- * @file xbee_uart.c
+ * @file xbee_receive.cpp
  * @author Tonser <sundxfansky@sjtu.edu.cn>
  * v1.0 2019.5.14
  *
- * xbee驱动 通过串口传递数据 发布ORB_ID(optical_flow)
+ * xbee驱动 通过串口数据 发布uORB消息
  *
- * This driver publish optical flow data.
+ * This driver publish xbee_receive uorb data.
  */
 static bool thread_should_exit = false;
 static bool thread_running = false;
 static int daemon_task;
-#define RECBUFSIZE 256;
-#define SEND_SIZE 14;
 
-__EXPORT int xbee_uart_main(int argc, char *argv[]);
-int xbee_uart_thread_main(int argc, char *argv[]);
+//same to xbee_send.cpp setting
+short xbee_data_size=14;
+//data buffer,size same to xbee_data_size
+short xbee_data_in[14];
 
+
+extern "C" __EXPORT int xbee_receive_main(int argc, char *argv[]);
+int xbee_receive_thread_main(int argc, char *argv[]);
+unsigned short crc_update (unsigned short crc, unsigned char data);
+unsigned short crc16(void* data, unsigned short cnt);
+short getlength(short s,short e);
+short incindex(short num,short inc);
 static int uart_init(const char * uart_name);    //
 static int set_uart_baudrate(const int fd, unsigned int baud); //static
 static void usage(const char *reason);            //static
-//extern orb_advert_t mavlink_log_pub_DEBUG;
+int serial_receive(int file_descriptor, char *buffer,size_t data_len);
+int parse_xbee_data(int fd, short *data, short send_size);
 orb_advert_t mavlink_log_pub_DEBUG = NULL;
 
 int set_uart_baudrate(const int fd, unsigned int baud)
@@ -176,11 +184,11 @@ short getlength(short s,short e)
     short data_length=0;
     if(s<=e)
     {
-        data_length=e-s;
+        data_length= e - s;
     }
     else
     {
-        data_length=e+RECBUFSIZE-s;
+        data_length = e + 256 - s;
     }
     return data_length;
 }
@@ -188,61 +196,46 @@ short getlength(short s,short e)
 short incindex(short num,short inc)
 {
     num=num+inc;
-    if(num>RECBUFSIZE-1)
+    if(num>256-1)
     {
-        num=num-RECBUFSIZE;
+        num=num-256;
     }
     return num;
 }
 
-int parse_xbee_data(int fd, short *data, short send_size = 14){
+int parse_xbee_data(int fd, short *data, short send_size){
     int size = 0;
-    static char data_in[RECBUFSIZE];
-    char data_buf[RECBUFSIZE];
+    static char data_in[256];
+    char data_buf[256];
     char recbuf[32];
     short sync = 0;
-    short i=0, j=0, k=0;
-    int readcount = 0;
-    short intstate=0;
-
-    int read_tmp = 0;
-    char descriptor = 0;
+    short i=0, j=0, k=0;;
     unsigned short* crc = NULL;
     short* data_ptr = NULL;
-    unsigned long RxBytes, BytesReceived;
+    short BytesReceived;
     static short data_out_store[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    static short status_store[] = {0,0};
-//    short send_size = 14;
     short data_new_flag = 1;
     short data_length=0;
-
-    static char data_rec_store[256];
-    static int data_rec_count=0;
-    static short data_sync=0;
     static short starti=0;
     static short endi=0;
-
     size = send_size*2+3+3;
-
     data_length=getlength(starti,endi);
-
-
     BytesReceived = serial_receive(fd,data_buf,size*2);
     if(BytesReceived<1)
     {
         return 0;
     }
     {
-        if(data_length+BytesReceived>RECBUFSIZE-1)
+        if(data_length+BytesReceived>256-1)
         {
             endi=0;starti=0;
         }
         j=0;i=endi;
         for(k=0;k<BytesReceived;k++)
         {
-            if(i>RECBUFSIZE-1)
+            if(i>256-1)
             {
-                i=i-RECBUFSIZE;
+                i=i-256;
             }
             data_in[i]=data_buf[j];
             j++;
@@ -313,7 +306,7 @@ int parse_xbee_data(int fd, short *data, short send_size = 14){
             data_new_flag=0;
         }
     }
-
+    // char descriptor = 0;
     if (data_new_flag == 1)
     {
         j=starti;
@@ -321,13 +314,13 @@ int parse_xbee_data(int fd, short *data, short send_size = 14){
         {
             recbuf[k]=data_in[j];
             j++;
-            if(j>RECBUFSIZE-1)
+            if(j>256-1)
             {
-                j=j-RECBUFSIZE;
+                j=j-256;
             }
         }
         i=3;
-        descriptor = recbuf[i];
+        // descriptor = recbuf[i];
         i=i+1;
         data_ptr = (short*) &(recbuf[i]);
         i = i+send_size*2;
@@ -335,7 +328,7 @@ int parse_xbee_data(int fd, short *data, short send_size = 14){
 
         if (crc16(data_ptr, send_size*2) == *crc)
         {
-            memcpy(data_out, data_ptr, sizeof(data_out_store));
+            memcpy(xbee_data_in, data_ptr, sizeof(data_out_store));
             starti=incindex(starti,size);
             return 1;
         }
@@ -344,13 +337,11 @@ int parse_xbee_data(int fd, short *data, short send_size = 14){
     return 0;
 }
 
-int xbee_uart_main(int argc, char *argv[])
+int xbee_receive_main(int argc, char *argv[])
 {
 
-mavlink_log_info(&mavlink_log_pub_DEBUG,"[inav] upixels_flow_main on init");
-// mavlink_log_critical(mavlink_log_pub_DEBUG, "test>>>>>>> %8.4f",9.9898);
-			
-    if (argc < 2) 
+    mavlink_log_info(&mavlink_log_pub_DEBUG,"[inav] xbee_receive init");
+    if (argc < 2)
     {
         usage("[YCM]missing command");
     }
@@ -362,11 +353,11 @@ mavlink_log_info(&mavlink_log_pub_DEBUG,"[inav] upixels_flow_main on init");
         }
 
         thread_should_exit = false;
-        daemon_task = px4_task_spawn_cmd("xbee_uart",
+        daemon_task = px4_task_spawn_cmd("xbee_receive",
                          SCHED_DEFAULT,
                          SCHED_PRIORITY_DEFAULT,
                          2500,
-                         xbee_uart_thread_main,
+                         xbee_receive_thread_main,
                          (argv) ? (char * const *)&argv[2] : (char * const *)NULL);
         return 0;
     }
@@ -391,12 +382,10 @@ mavlink_log_info(&mavlink_log_pub_DEBUG,"[inav] upixels_flow_main on init");
     return 1;
 }
 
-int xbee_uart_thread_main(int argc, char *argv[])
+int xbee_receive_thread_main(int argc, char *argv[])
 {
-    mavlink_log_info(&mavlink_log_pub_DEBUG,"upixels_flow run ");
-    char data = '0';
-    short data_out[SEND_SIZE];
-    int sec[2];
+    mavlink_log_info(&mavlink_log_pub_DEBUG,"xbee_receive run");
+
     int uart_read = uart_init("/dev/ttyS6");//fmuv5 ttys3 fmuv2,v3 ttys6
     if(false == uart_read)
     {
@@ -408,111 +397,49 @@ int xbee_uart_thread_main(int argc, char *argv[])
         mavlink_log_critical(&mavlink_log_pub_DEBUG,"[YCM]set_uart_baudrate is failed\n");
         return -1;
     }
-    mavlink_log_info(&mavlink_log_pub_DEBUG,"[YCM]uart init is successful\n");
+    mavlink_log_info(&mavlink_log_pub_DEBUG,"[YCM]xbee_receive init is successful\n");
     thread_running = true;
     // 定义话题结构
-    struct optical_flow_s flow_data;
+    struct vehicle_attitude_setpoint_s attspt_data;
     // 初始化数据
-    memset(&flow_data, 0 , sizeof(flow_data));
-   
+    memset(&attspt_data, 0 , sizeof(attspt_data));
+
     //公告消息
-//    orb_advert_t flow_data_handle = orb_advertise(ORB_ID(optical_flow), &flow_data);//公告这个主题
-    //  orb_advert_t flow_data_handle = orb_advertise(ORB_ID(upixels_flow), &flow_data);//公告这个主题
+    orb_advert_t xbee_data_handle = orb_advertise(ORB_ID(vehicle_attitude_setpoint)
+            , &attspt_data);//公告这个主题
 
-    // 测试订阅程序
-    // int test_sub_handle = orb_subscribe(ORB_ID(upixels_flow));
-    // struct upixels_flow_s test_sub;
+    while(thread_running) {
+        uint64_t timestamp = hrt_absolute_time();
+        int serial_status = parse_xbee_data(uart_read, xbee_data_in, xbee_data_size);
+        if (serial_status > 0) {
+            attspt_data.roll_body = (float) (xbee_data_in[0]) / 10000.0f;
+            attspt_data.pitch_body = (float) (xbee_data_in[1]) / 10000.0f;
+            attspt_data.yaw_body = (float) (xbee_data_in[2]) / 10000.0f;
+            attspt_data.thrust = (float) (xbee_data_in[3]) / 10000.0f;
+            attspt_data.timestamp = timestamp;
 
-    // int counter = 0;
-//    uint64_t _previous_collect_timestamp = hrt_absolute_time();
-//    uint64_t _flow_dt_sum_usec = 0;
-//    float scale = 1.3f;
-//    int vehicle_attitude_sub = orb_subscribe(ORB_ID(vehicle_attitude));
-    while(thread_running)
-   {
-        parse_xbee_data(uart_read,data_out,SEND_SIZE);
-        memcpy(secs,&data_out[10],sizeof(secs));
-        PX4_INFO("%X,%X,%X,%X,%X,%X"
-                "%X,%X,%X,%X,%X,%X"
-                "%X,%X",
-                data_out[0],data_out[1],data_out[2],data_out[3],data_out[4],data_out[5],
-                data_out[6],data_out[7],data_out[8],data_out[9],data_out[10],data_out[11],
-                data_out[12],data_out[13]);
+            // int secs[2];
+            // memcpy(secs,&xbee_data_in[10],sizeof(secs));
+            // // secs[0]=msg.header.stamp.sec;
+            // // secs[1]=msg.header.stamp.nsec;
+            // attspt_data.timestamp = (float)secs[0]+(float)[1]secs/1000000.0f
 
-//        PX4_INFO("uart :%d",uart_read);
-//    	  read(uart_read,&data,1);
-//        if((data == 0xFE))
-//        {
-//            for(int k = 0;k < 14;++k){
-//            data = '0';
-//            read(uart_read,&data,1);
-//            fuck_buffer[k] = data;
-//            }
-//            PX4_INFO("%X,%X,%X,%X,%X,%X"
-//                     "%X,%X,%X,%X,%X,%X"
-//                     "%X,%X",
-//                    fuck_buffer[0],fuck_buffer[1],fuck_buffer[2],fuck_buffer[3],fuck_buffer[4],fuck_buffer[5],
-//                     fuck_buffer[6],fuck_buffer[7],fuck_buffer[8],fuck_buffer[9],fuck_buffer[10],fuck_buffer[11],
-//                     fuck_buffer[12],fuck_buffer[13]);
+            orb_publish(ORB_ID(vehicle_attitude_setpoint), xbee_data_handle, &attspt_data);
+            PX4_INFO("serial status:%d ,timestamp :%d ,data: %\t8.5f, %\t8.5f, %\t8.5f,thrust: %\t8.5f",
+                     serial_status,
+                     (int)attspt_data.timestamp,
+                     (double)attspt_data.roll_body,
+                     (double)attspt_data.pitch_body,
+                     (double)attspt_data.yaw_body,
+                     (double)attspt_data.thrust);
+            // PX4_INFO("%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d",
+            //          xbee_data_in[0], xbee_data_in[1], xbee_data_in[2], xbee_data_in[3], xbee_data_in[4], xbee_data_in[5],
+            //          xbee_data_in[6], xbee_data_in[7], xbee_data_in[8], xbee_data_in[9],
+            //          xbee_data_in[12], xbee_data_in[13]);
+        }
+    }
 
-//
-//            if((data == 0x0A))
-//            {
-//                PX4_INFO("status: sucesss4");
-//                for(int k = 0;k < 6;++k)
-//                {
-//                data = '0';
-//                read(uart_read,&data,1);
-//                buffer[k] = data;
-//                }
-//                for(int k = 0;k < 3;++k)
-//                {
-//                    data = '0';
-//                    read(uart_read,&data,1);
-//                }
-//                PX4_INFO("status: sucesss5");
-//                buffer[6] = data;
-//                uint64_t timestamp = hrt_absolute_time();
-//                uint64_t dt_flow = timestamp - _previous_collect_timestamp;
-//                _previous_collect_timestamp = timestamp;
-//                _flow_dt_sum_usec += dt_flow;
-//                // debug 输出数据 十六进制
-//                // PX4_INFO("%X,%X,%X,%X,%X,%X,%X,",buffer[0],buffer[1],buffer[2],buffer[3],buffer[4],buffer[5],buffer[6]);
-//                //X 像素点累计时间内的累加位移,(radians*10000) [除以 10000 乘以高度(m)后为实际位移(m)]
-//                upixels_flow_x = (float)((int16_t)(buffer[1]<<8|buffer[0])/10000.0f);// 单位是m
-//                upixels_flow_y = (float)((int16_t)(buffer[3]<<8|buffer[2])/10000.0f);// 单位是m
-//                integration_timespan = (float)((uint16_t)(buffer[5]<<8|buffer[4]));// 单位是us
-//                //flow_data.pixel_flow_x_integral = (float)(upixels_flow_x*1000000.0f/integration_timespan);// rad/s
-//                //flow_data.pixel_flow_y_integral = (float)(upixels_flow_y*1000000.0f/integration_timespan);// rad/s
-//                flow_data.pixel_flow_x_integral = -upixels_flow_y*scale;
-//                flow_data.pixel_flow_y_integral = upixels_flow_x*scale;
-//                //orb_copy(ORB_ID(vehicle_attitude), vehicle_attitude_sub, &att);
-//                flow_data.gyro_x_rate_integral = 0.0f*integration_timespan;
-//                flow_data.gyro_y_rate_integral = 0.0f;
-//                flow_data.gyro_z_rate_integral = 0.0f;
-//                flow_data.min_ground_distance = 0.5;//与官方optical_flow不同，官方数据为0.7
-//                flow_data.max_ground_distance = 3;//与官方optical_flow相同
-//                flow_data.max_flow_rate = 2.5;//与官方optical_flow相同,最大限制角速度
-//                flow_data.sensor_id = 0;
-//                flow_data.timestamp = timestamp;
-//                flow_data.frame_count_since_last_readout = 1; //4;
-//                flow_data.integration_timespan = _flow_dt_sum_usec;
-//                _flow_dt_sum_usec = 0;
-//                if (buffer[6] == 0xF5) {
-//                    //数据可用
-//                    flow_data.quality = 255;
-//                    orb_publish(ORB_ID(optical_flow),flow_data_handle,  &flow_data);
-//                }
-//                else{
-//                    flow_data.quality = 0;
-//                    orb_publish(ORB_ID(optical_flow),flow_data_handle,&flow_data);
-//                }
-//            }
-//        }
-   }
     thread_running = false;
-    //取消订阅
-    // orb_unsubscribe(test_sub_handle);
     close(uart_read);
     fflush(stdout);
     return 0;

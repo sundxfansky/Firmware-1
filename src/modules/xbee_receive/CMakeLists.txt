@@ -32,14 +32,11 @@
 ############################################################################
 
 px4_add_module(
-	MODULE modules__xbee_uart
-
-	MAIN xbee_uart
-	# MAIN flow_uart_debug
+	MODULE modules__xbee_receive
+	MAIN xbee_receive
 	STACK 3000
-	SRCS	
-		# flow_uart_debug.c
-		xbee_uart.c
+	SRCS
+        xbee_receive.cpp
 
 	DEPENDS
 		platforms__common

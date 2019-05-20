@@ -252,7 +252,7 @@ int miniflow_thread_main(int argc, char *argv[])
                     flow_data.frame_count_since_last_readout = 1; //4;
                     flow_data.integration_timespan = _flow_dt_sum_usec;
                     _flow_dt_sum_usec = 0;
-                    flow_data.quality = buffer[5];
+                    flow_data.quality = (math::constrain((int16_t)buffer[5],64,78)-64)*255/14;
                     orb_publish(ORB_ID(optical_flow),flow_data_handle,  &flow_data);
                 }
             }

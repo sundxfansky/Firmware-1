@@ -168,10 +168,9 @@ int miniflow_thread_main(int argc, char *argv[])
     char sum = '0';
     float mini_flow_x = -1;
     float mini_flow_y = -1;
-    float integration_timespan = -1;
-    // long checksum = 0; 
+    // long checksum = 0;
     // uint8_t valid = 0;
-    int uart_read = uart_init("/dev/ttyS6"); // ttyS3 for fmuv5 ttyS6 for fmuv2
+    int uart_read = uart_init("/dev/ttyS3"); // ttyS3 for fmuv5 ttyS6 for fmuv2
 
     if(false == uart_read)
     {
@@ -179,7 +178,6 @@ int miniflow_thread_main(int argc, char *argv[])
          return -1;
     }
     if(false == set_uart_baudrate(uart_read,19200)){
-        // mavlink_log_critical(&mavlink_log_pub_miniflow,"[YCM]set_uart_baudrate is failed\n");
         return -1;
     }
     mavlink_log_info(&mavlink_log_pub_miniflow,"[YCM]uart init is successful\n");
@@ -212,11 +210,13 @@ int miniflow_thread_main(int argc, char *argv[])
         // PX4_WARN("warnxxxxxxxxxxxx!!!!");
         //解码 串口信息
     	read(uart_read,&data,1);
-        if((data == 0xFE))
+        // mavlink_log_info(&mavlink_log_pub_miniflow,"[YCM] data: %X\n",data);
+    	PX4_INFO("%X",data);
+        if(data == 0xFE)
         {
             data = '0';
             read(uart_read,&data,1);
-            if((data == 0x04))
+            if(data == 0x04)
             {
 
                 for(int k = 0;k < 7;++k)
@@ -241,7 +241,7 @@ int miniflow_thread_main(int argc, char *argv[])
                     //flow_data.pixel_flow_y_integral = (float)(mini_flow_y*1000000.0f/integration_timespan);// rad/s
                     flow_data.pixel_flow_x_integral = -mini_flow_y*scale;
                     flow_data.pixel_flow_y_integral = mini_flow_x*scale;
-                    flow_data.gyro_x_rate_integral = 0.0f*integration_timespan;
+                    flow_data.gyro_x_rate_integral = 0.0f;
                     flow_data.gyro_y_rate_integral = 0.0f;
                     flow_data.gyro_z_rate_integral = 0.0f;
                     flow_data.min_ground_distance = 0.5;//与官方optical_flow不同，官方数据为0.7

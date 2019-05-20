@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <errno.h>
 #include <math.h>
+#include <mathlib/mathlib.h>
 #include <drivers/drv_hrt.h>
 #include <systemlib/err.h>
 #include <fcntl.h>
@@ -186,10 +187,9 @@ int miniflow_thread_main(int argc, char *argv[])
 
     // 定义话题结构
     struct optical_flow_s flow_data;
-//    struct vehicle_attitude_s att;
-//    memset(&att, 0, sizeof(att));
-    // struct mini_flow_s flow_data;
-    // 初始化数据
+    // struct vehicle_attitude_s att;
+    // memset(&att, 0, sizeof(att));
+    //  初始化数据
     memset(&flow_data, 0 , sizeof(flow_data));
    
     //公告消息
@@ -204,7 +204,7 @@ int miniflow_thread_main(int argc, char *argv[])
     uint64_t _previous_collect_timestamp = hrt_absolute_time();
     uint64_t _flow_dt_sum_usec = 0;
     float scale = 1.3f;
-//    int vehicle_attitude_sub = orb_subscribe(ORB_ID(vehicle_attitude));
+    // int vehicle_attitude_sub = orb_subscribe(ORB_ID(vehicle_attitude));
     while(thread_running)
    {
         // PX4_WARN("warnxxxxxxxxxxxx!!!!");
@@ -232,13 +232,9 @@ int miniflow_thread_main(int argc, char *argv[])
                     uint64_t dt_flow = timestamp - _previous_collect_timestamp;
                     _previous_collect_timestamp = timestamp;
                     _flow_dt_sum_usec += dt_flow;
-                    // debug 输出数据 十六进制
                     // PX4_INFO("%X,%X,%X,%X,%X,%X,%X,",buffer[0],buffer[1],buffer[2],buffer[3],buffer[4],buffer[5],buffer[6]);
-                    //X 像素点累计时间内的累加位移,(radians*10000) [除以 10000 乘以高度(m)后为实际位移(m)]
                     mini_flow_x = (float)((int16_t)(buffer[1]<<8|buffer[0])/10000.0f);// 单位是m
                     mini_flow_y = (float)((int16_t)(buffer[3]<<8|buffer[2])/10000.0f);// 单位是m
-                    //flow_data.pixel_flow_x_integral = (float)(mini_flow_x*1000000.0f/integration_timespan);// rad/s
-                    //flow_data.pixel_flow_y_integral = (float)(mini_flow_y*1000000.0f/integration_timespan);// rad/s
                     flow_data.pixel_flow_x_integral = -mini_flow_y*scale;
                     flow_data.pixel_flow_y_integral = mini_flow_x*scale;
                     flow_data.gyro_x_rate_integral = 0.0f;
@@ -252,7 +248,9 @@ int miniflow_thread_main(int argc, char *argv[])
                     flow_data.frame_count_since_last_readout = 1; //4;
                     flow_data.integration_timespan = _flow_dt_sum_usec;
                     _flow_dt_sum_usec = 0;
-                    flow_data.quality = (math::constrain((int16_t)buffer[5],64,78)-64)*255/14;
+                    if ((int16_t)buffer[5]<64){buffer[5]=64;}
+                    if ((int16_t)buffer[5]>78){buffer[5]=78;}
+                    flow_data.quality = (buffer[5]-64)*255/14;
                     orb_publish(ORB_ID(optical_flow),flow_data_handle,  &flow_data);
                 }
             }

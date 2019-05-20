@@ -115,6 +115,8 @@ set(config_module_list
 	# sdx add upflow
 	#
 	modules/flow_uart
+	#add miniflow
+	modules/miniflow
 
 	#
 	# Logging

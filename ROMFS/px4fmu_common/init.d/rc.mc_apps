@@ -31,7 +31,7 @@ then
 	fi
 fi
 # flow sdx
-flow_uart start
+# flow_uart start
 
 # EKF
 if param compare SYS_MC_EST_GROUP 2

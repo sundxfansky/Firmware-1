@@ -2019,9 +2019,11 @@ Mavlink::task_main(int argc, char *argv[])
 		configure_stream("HIGHRES_IMU", 1.5f);
 		configure_stream("HOME_POSITION", 0.5f);
 		configure_stream("LOCAL_POSITION_NED", 20.0f);
+		// configure_stream("LOCAL_POSITION_NED", 1.0f);
 //		configure_stream("NAMED_VALUE_FLOAT", 1.0f);
 //		configure_stream("NAV_CONTROLLER_OUTPUT", 1.5f);
 		configure_stream("OPTICAL_FLOW_RAD", 1.0f);
+		// configure_stream("OPTICAL_FLOW_RAD", 20.0f);
 		configure_stream("PING", 0.1f);
 //		configure_stream("POSITION_TARGET_LOCAL_NED", 1.5f);
 //		configure_stream("POSITION_TARGET_GLOBAL_INT", 1.5f);

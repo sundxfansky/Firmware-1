@@ -9,7 +9,8 @@ set(config_module_list
 	#
 	drivers/barometer
 	drivers/differential_pressure
-	drivers/distance_sensor
+	# drivers/distance_sensor
+	drivers/distance_sensor/ll40ls
 	drivers/magnetometer
 	drivers/telemetry
 

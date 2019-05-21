@@ -1,7 +1,5 @@
 # SJTU-USATL-PX4-v1.8.0 STABLE
-上海交大无人系统实验室 PX4稳定固件-光流版
-每次需要修改三个参数 AID_MASK(optical_flow); HGT(range_sensor); ll40ls(i2c);
-
+上海交大无人系统实验室 PX4稳定固件-xbee收发程序测试
 pxihawk,pixhack v3 /dev/ttyS6,pixhawk4 /dev/ttyS3
 需要在pixhawk4 中使用时，应在rcs中禁用ttyS3 mavlink内容
 ```

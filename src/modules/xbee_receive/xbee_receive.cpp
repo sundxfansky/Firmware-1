@@ -418,6 +418,7 @@ int xbee_receive_thread_main(int argc, char *argv[])
             attspt_data.q_d[2] = (float) (xbee_data_in[3]) / 10000.0f;
             attspt_data.q_d[3] = (float) (xbee_data_in[4]) / 10000.0f;
             attspt_data.timestamp = timestamp;
+            attspt_data.q_d_valid = true;
 
             // int secs[2];
             // memcpy(secs,&xbee_data_in[10],sizeof(secs));
@@ -425,15 +426,17 @@ int xbee_receive_thread_main(int argc, char *argv[])
             // // secs[1]=msg.header.stamp.nsec;
             // attspt_data.timestamp = (float)secs[0]+(float)[1]secs/1000000.0f
 
-            orb_publish(ORB_ID(vehicle_attitude_setpoint), xbee_data_handle, &attspt_data);
-            PX4_INFO("serial status:%d ,timestamp :%d ,data: %\t8.5f, %\t8.5f, %\t8.5f,%\t8.5f,thrust: %\t8.5f",
-                     serial_status,
-                     (int)attspt_data.timestamp,
-                     (double)attspt_data.q_d[0],
-                     (double)attspt_data.q_d[1],
-                     (double)attspt_data.q_d[2],
-                     (double)attspt_data.q_d[3],
-                     (double)attspt_data.thrust);
+            // orb_publish(ORB_ID(vehicle_attitude_setpoint), xbee_data_handle, &attspt_data);
+            xbee_data_handle = xbee_data_handle;
+
+            // PX4_INFO("serial status:%d ,timestamp :%d ,data: %\t8.5f, %\t8.5f, %\t8.5f,%\t8.5f,thrust: %\t8.5f",
+            //          serial_status,
+            //          (int)attspt_data.timestamp,
+            //          (double)attspt_data.q_d[0],
+            //          (double)attspt_data.q_d[1],
+            //          (double)attspt_data.q_d[2],
+            //          (double)attspt_data.q_d[3],
+            //          (double)attspt_data.thrust);
             // PX4_INFO("%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d",
             //          xbee_data_in[0], xbee_data_in[1], xbee_data_in[2], xbee_data_in[3], xbee_data_in[4], xbee_data_in[5],
             //          xbee_data_in[6], xbee_data_in[7], xbee_data_in[8], xbee_data_in[9],

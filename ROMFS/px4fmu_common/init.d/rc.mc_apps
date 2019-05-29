@@ -32,6 +32,7 @@ then
 fi
 # flow sdx
 # flow_uart start
+miniflow start
 
 # EKF
 if param compare SYS_MC_EST_GROUP 2

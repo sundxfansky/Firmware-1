@@ -203,7 +203,7 @@ int miniflow_thread_main(int argc, char *argv[])
     // int counter = 0;
     uint64_t _previous_collect_timestamp = hrt_absolute_time();
     uint64_t _flow_dt_sum_usec = 0;
-    float scale = 1.3f;
+    float scale = 3.52f;// 与APM的数据一致
     // int vehicle_attitude_sub = orb_subscribe(ORB_ID(vehicle_attitude));
     while(thread_running)
    {
@@ -211,7 +211,7 @@ int miniflow_thread_main(int argc, char *argv[])
         //解码 串口信息
     	read(uart_read,&data,1);
         // mavlink_log_info(&mavlink_log_pub_miniflow,"[YCM] data: %X\n",data);
-    	PX4_INFO("%X",data);
+    	// PX4_INFO("%X",data);
         if(data == 0xFE)
         {
             data = '0';
@@ -225,7 +225,7 @@ int miniflow_thread_main(int argc, char *argv[])
                 read(uart_read,&data,1);
                 buffer[k] = data;
                 }
-                PX4_INFO("%X,%X,%X,%X,%X,%X,%X,",buffer[0],buffer[1],buffer[2],buffer[3],buffer[4],buffer[5],buffer[6]);
+                // PX4_INFO("%X,%X,%X,%X,%X,%X,%X,",buffer[0],buffer[1],buffer[2],buffer[3],buffer[4],buffer[5],buffer[6]);
                 sum = buffer[0]+buffer[1]+buffer[2]+buffer[3];
                 if (buffer[4]==sum&&buffer[6]==0xAA){
                     uint64_t timestamp = hrt_absolute_time();
@@ -233,10 +233,10 @@ int miniflow_thread_main(int argc, char *argv[])
                     _previous_collect_timestamp = timestamp;
                     _flow_dt_sum_usec += dt_flow;
                     // PX4_INFO("%X,%X,%X,%X,%X,%X,%X,",buffer[0],buffer[1],buffer[2],buffer[3],buffer[4],buffer[5],buffer[6]);
-                    mini_flow_x = (float)((int16_t)(buffer[1]<<8|buffer[0])/10000.0f);// 单位是m
-                    mini_flow_y = (float)((int16_t)(buffer[3]<<8|buffer[2])/10000.0f);// 单位是m
-                    flow_data.pixel_flow_x_integral = -mini_flow_y*scale;
-                    flow_data.pixel_flow_y_integral = mini_flow_x*scale;
+                    mini_flow_x = (float)((int16_t)(buffer[1]<<8|buffer[0])/1000.0f);// 单位是m
+                    mini_flow_y = (float)((int16_t)(buffer[3]<<8|buffer[2])/1000.0f);// 单位是m
+                    flow_data.pixel_flow_x_integral = mini_flow_x*scale;
+                    flow_data.pixel_flow_y_integral = mini_flow_y*scale;
                     flow_data.gyro_x_rate_integral = 0.0f;
                     flow_data.gyro_y_rate_integral = 0.0f;
                     flow_data.gyro_z_rate_integral = 0.0f;
